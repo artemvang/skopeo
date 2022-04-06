@@ -1,0 +1,54 @@
+before:
+  hooks:
+    - go mod download
+
+builds:
+- env:
+    - CGO_ENABLED=0
+    - CGO_CFLAGS=""
+    - CGO_LDFLAGS="-lgpgme -lassuan -lgpg-error"
+    - GO111MODULE=on
+  flags:
+    - -tags=containers_image_openpgp
+    - -mod=vendor
+  ldflags: '-X main.gitCommit={{ .Commit }}'
+  gcflags: ''
+  binary: '{{ .ProjectName }}_v{{ .Version }}'
+  main: ./cmd/skopeo
+  goos:
+    - windows
+    - darwin
+    - linux
+  goarch:
+    - amd64
+    - '386'
+    - arm
+    - arm64
+  ignore:
+    - goos: darwin
+      goarch: '386'
+
+archives:
+- format: zip
+  name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+
+changelog:
+  skip: true
+
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  algorithm: sha256
+
+signs:
+  - artifacts: checksum
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
+snapshot:
+  name_template: "devel"
